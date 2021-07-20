@@ -71,11 +71,13 @@ QgsPointDisplacementRendererWidget::QgsPointDisplacementRendererWidget( QgsVecto
 
   if ( renderer )
   {
-    mRenderer = QgsPointDisplacementRenderer::convertFromRenderer( renderer );
+    mRenderer.reset( QgsPointDisplacementRenderer::convertFromRenderer( renderer ) );
   }
   if ( !mRenderer )
   {
-    mRenderer = new QgsPointDisplacementRenderer();
+    mRenderer = std::make_unique< QgsPointDisplacementRenderer >();
+    if ( renderer )
+      renderer->copyRendererData( mRenderer.get() );
   }
 
   blockAllSignals( true );
@@ -176,14 +178,11 @@ QgsPointDisplacementRendererWidget::QgsPointDisplacementRendererWidget( QgsVecto
   mCenterSymbolToolButton->registerExpressionContextGenerator( this );
 }
 
-QgsPointDisplacementRendererWidget::~QgsPointDisplacementRendererWidget()
-{
-  delete mRenderer;
-}
+QgsPointDisplacementRendererWidget::~QgsPointDisplacementRendererWidget() = default;
 
 QgsFeatureRenderer *QgsPointDisplacementRendererWidget::renderer()
 {
-  return mRenderer;
+  return mRenderer.get();
 }
 
 void QgsPointDisplacementRendererWidget::setContext( const QgsSymbolWidgetContext &context )
@@ -282,6 +281,7 @@ void QgsPointDisplacementRendererWidget::mRendererSettingsButton_clicked()
     QList< QgsExpressionContextScope > scopes = context.additionalExpressionContextScopes();
     scopes << scope;
     context.setAdditionalExpressionContextScopes( scopes );
+    w->disableSymbolLevels();
     w->setContext( context );
 
     connect( w, &QgsPanelWidget::widgetChanged, this, &QgsPointDisplacementRendererWidget::updateRendererFromWidget );

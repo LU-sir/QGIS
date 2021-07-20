@@ -46,10 +46,10 @@ Holds metadata about mesh driver
 Constructs default metadata without any capabilities
 %End
 
-    QgsMeshDriverMetadata( const QString &name,
-                           const QString &description,
-                           const MeshDriverCapabilities &capabilities,
-                           const QString &writeDatasetOnFileSuffix );
+ QgsMeshDriverMetadata( const QString &name,
+        const QString &description,
+        const MeshDriverCapabilities &capabilities,
+        const QString &writeDatasetOnFileSuffix ) /Deprecated/;
 %Docstring
 Constructs driver metadata with selected capabilities
 
@@ -57,6 +57,26 @@ Constructs driver metadata with selected capabilities
 :param description: short description of the driver
 :param capabilities: driver's capabilities
 :param writeDatasetOnFileSuffix: suffix used to write datasets on file
+
+.. deprecated::
+   QGIS 3.22
+%End
+
+    QgsMeshDriverMetadata( const QString &name,
+                           const QString &description,
+                           const MeshDriverCapabilities &capabilities,
+                           const QString &writeDatasetOnFileSuffix,
+                           const QString &writeMeshFrameOnFileSuffix );
+%Docstring
+Constructs driver metadata with selected capabilities
+
+:param name: name/key of the driver
+:param description: short description of the driver
+:param capabilities: driver's capabilities
+:param writeDatasetOnFileSuffix: suffix used to write datasets on file
+:param writeMeshFrameOnFileSuffix: suffix used to write mesh frame on file
+
+.. versionadded:: 3.22
 %End
 
     MeshDriverCapabilities capabilities() const;
@@ -77,6 +97,13 @@ Returns the description for this driver.
     QString writeDatasetOnFileSuffix() const;
 %Docstring
 Returns the suffix used to write datasets on file
+%End
+
+    QString writeMeshFrameOnFileSuffix() const;
+%Docstring
+Returns the suffix used to write mesh on file
+
+.. versionadded:: 3.22
 %End
 
 };
@@ -111,6 +138,7 @@ library object.
     {
       PriorityForUri,
       LayerTypesForUri,
+      QuerySublayers,
     };
     typedef QFlags<QgsProviderMetadata::ProviderMetadataCapability> ProviderMetadataCapabilities;
 
@@ -265,6 +293,24 @@ The default method returns ``False`` for all URIs.
    ignore the specified ``uri``, not just the provider associated with this metadata!
 
 .. versionadded:: 3.18
+%End
+
+    virtual QList< QgsProviderSublayerDetails > querySublayers( const QString &uri, Qgis::SublayerQueryFlags flags = Qgis::SublayerQueryFlags(), QgsFeedback *feedback = 0 ) const;
+%Docstring
+Queries the specified ``uri`` and returns a list of any valid sublayers found in the dataset which can be handled by this provider.
+
+The optional ``flags`` argument can be used to control the behavior of the query.
+
+The optional ``feedback`` argument can be used to provide cancellation support for long-running queries.
+
+.. note::
+
+   Providers which implement this method should always return a list of sublayer details for any valid, even if the ``uri``
+   only relates to a single layer. Returning a non-empty list indicates that the provider is able to load at least one layer using the ``uri``,
+   and is used to collate a combined layer of all providers which support the URI (e.g. in the case that a URI may be readable by multiple
+   different providers).
+
+.. versionadded:: 3.22
 %End
 
     virtual QgsDataProvider *createProvider( const QString &uri,
@@ -437,7 +483,7 @@ Saves ``metadata`` to the layer corresponding to the specified ``uri``.
          - errorMessage: descriptive string of error if encountered
 
 
-:raises :: py:class:`QgsNotSupportedException` if the provider does not support saving layer metadata for the
+:raises QgsNotSupportedException: if the provider does not support saving layer metadata for the
    specified ``uri``.
 
 
@@ -467,7 +513,7 @@ Raises a :py:class:`QgsProviderConnectionException` if any errors are encountere
 
 :param cached: if ``False`` connections will be re-read from the settings
 
-:raises :: py:class:`QgsProviderConnectionException`
+:raises QgsProviderConnectionException: 
 
 .. versionadded:: 3.10
 %End
@@ -481,7 +527,7 @@ Raises a :py:class:`QgsProviderConnectionException` if any errors are encountere
 
 :param cached: if ``False`` connections will be re-read from the settings
 
-:raises :: py:class:`QgsProviderConnectionException`
+:raises QgsProviderConnectionException: 
 
 .. versionadded:: 3.10
 %End
@@ -495,7 +541,7 @@ Raises a :py:class:`QgsProviderConnectionException` if any errors are encountere
 :param name: the connection name
 :param cached: if ``False`` connections will be re-read from the settings
 
-:raises :: py:class:`QgsProviderConnectionException`
+:raises QgsProviderConnectionException: 
 
 .. versionadded:: 3.10
 %End
@@ -508,7 +554,7 @@ the newly created connection is not automatically stored in the settings, call
 :py:func:`~QgsProviderMetadata.saveConnection` to save it.
 Ownership is transferred to the caller.
 
-:raises :: py:class:`QgsProviderConnectionException`
+:raises QgsProviderConnectionException: 
 
 .. seealso:: :py:func:`saveConnection`
 
@@ -520,7 +566,7 @@ Ownership is transferred to the caller.
 Creates a new connection by loading the connection with the given ``name`` from the settings.
 Ownership is transferred to the caller.
 
-:raises :: py:class:`QgsProviderConnectionException`
+:raises QgsProviderConnectionException: 
 
 .. seealso:: :py:func:`findConnection`
 %End
@@ -530,7 +576,7 @@ Ownership is transferred to the caller.
 Removes the connection with the given ``name`` from the settings.
 Raises a :py:class:`QgsProviderConnectionException` if any errors are encountered.
 
-:raises :: py:class:`QgsProviderConnectionException`
+:raises QgsProviderConnectionException: 
 
 .. versionadded:: 3.10
 %End
@@ -542,7 +588,7 @@ Stores the connection in the settings
 :param connection: the connection to be stored in the settings
 :param name: the name under which the connection will be stored
 
-:raises :: py:class:`QgsProviderConnectionException`
+:raises QgsProviderConnectionException: 
 
 .. versionadded:: 3.10
 %End

@@ -10,6 +10,7 @@
 
 
 
+
 %ModuleHeaderCode
 #include <qgis.h>
 %End
@@ -81,11 +82,11 @@ The development version
       Warning,
       Critical,
       Success,
-      None
+      NoLevel,
     };
 
-    enum DataType
-    {
+    enum class DataType
+      {
       UnknownDataType,
       Byte,
       UInt16,
@@ -102,8 +103,8 @@ The development version
       ARGB32_Premultiplied
     };
 
-    enum PythonMacroMode
-    {
+    enum class PythonMacroMode
+      {
       Never,
       Ask,
       SessionOnly,
@@ -138,12 +139,76 @@ The development version
     typedef QFlags<Qgis::SymbolRenderHint> SymbolRenderHints;
 
 
+    enum class SymbolFlag
+    {
+      RendererShouldUseSymbolLevels,
+    };
+    typedef QFlags<Qgis::SymbolFlag> SymbolFlags;
+
+
     enum class SymbolPreviewFlag
       {
       FlagIncludeCrosshairsForMarkerSymbols,
     };
     typedef QFlags<Qgis::SymbolPreviewFlag> SymbolPreviewFlags;
 
+
+    enum class BrowserItemType
+      {
+      Collection,
+      Directory,
+      Layer,
+      Error,
+      Favorites,
+      Project,
+      Custom,
+      Fields,
+      Field,
+    };
+
+    enum class BrowserItemState
+      {
+      NotPopulated,
+      Populating,
+      Populated,
+    };
+
+    enum class BrowserItemCapability
+      {
+      NoCapabilities,
+      SetCrs,
+      Fertile,
+      Fast,
+      Collapse,
+      Rename,
+      Delete,
+    };
+    typedef QFlags<Qgis::BrowserItemCapability> BrowserItemCapabilities;
+
+
+    enum class BrowserLayerType
+      {
+      NoType,
+      Vector,
+      Raster,
+      Point,
+      Line,
+      Polygon,
+      TableLayer,
+      Database,
+      Table,
+      Plugin,
+      Mesh,
+      VectorTile,
+      PointCloud
+    };
+
+    enum class BrowserDirectoryMonitoring
+    {
+      Default,
+      NeverMonitor,
+      AlwaysMonitor,
+    };
 
     enum class VectorExportResult
       {
@@ -161,6 +226,29 @@ The development version
       UserCanceled,
     };
 
+    enum class SqlLayerDefinitionCapability
+    {
+      SubsetStringFilter,
+      GeometryColumn,
+      PrimaryKeys,
+      UnstableFeatureIds
+    };
+    typedef QFlags<Qgis::SqlLayerDefinitionCapability> SqlLayerDefinitionCapabilities;
+
+
+    enum class SqlKeywordCategory
+    {
+      Keyword,
+      Constant,
+      Function,
+      Geospatial,
+      Operator,
+      Math,
+      Aggregate,
+      String,
+      Identifier
+    };
+
     enum class DriveType
     {
       Unknown,
@@ -170,6 +258,90 @@ The development version
       Remote,
       CdRom,
       RamDisk,
+    };
+
+    enum class UnplacedLabelVisibility
+    {
+      FollowEngineSetting,
+      NeverShow,
+    };
+
+    enum class SublayerQueryFlag
+    {
+      FastScan,
+      ResolveGeometryType,
+      CountFeatures,
+    };
+    typedef QFlags<Qgis::SublayerQueryFlag> SublayerQueryFlags;
+
+
+    enum class RasterPipeInterfaceRole
+      {
+      Unknown,
+      Provider,
+      Renderer,
+      Brightness,
+      Resampler,
+      Projector,
+      Nuller,
+      HueSaturation,
+    };
+
+    enum class RasterResamplingStage
+      {
+      //! Resampling occurs in ResamplingFilter
+      ResampleFilter,
+      //! Resampling occurs in Provider
+      Provider
+    };
+
+    enum class MeshEditingErrorType
+    {
+      NoError,
+      InvalidFace,
+      TooManyVerticesInFace,
+      FlatFace,
+      UniqueSharedVertex,
+      InvalidVertex,
+      ManifoldFace,
+    };
+
+    enum class FilePathType
+    {
+      Absolute,
+      Relative,
+    };
+
+    enum class SublayerPromptMode
+    {
+      AlwaysAsk,
+      AskExcludingRasterBands,
+      NeverAskSkip,
+      NeverAskLoadAll,
+    };
+
+    enum class SelectBehavior
+      {
+      SetSelection,
+      AddToSelection,
+      IntersectSelection,
+      RemoveFromSelection,
+    };
+
+    enum class VectorEditResult
+      {
+      Success,
+      EmptyGeometry,
+      EditFailed,
+      FetchFeatureFailed,
+      InvalidLayer,
+    };
+
+    enum class VertexMarkerType
+      {
+      SemiTransparentCircle,
+      Cross,
+      NoMarker,
     };
 
     static const double DEFAULT_SEARCH_RADIUS_MM;
@@ -239,8 +411,15 @@ GEOS string version linked
 
 QFlags<Qgis::SymbolRenderHint> operator|(Qgis::SymbolRenderHint f1, QFlags<Qgis::SymbolRenderHint> f2);
 
+QFlags<Qgis::SymbolFlag> operator|(Qgis::SymbolFlag f1, QFlags<Qgis::SymbolFlag> f2);
+
 QFlags<Qgis::SymbolPreviewFlag> operator|(Qgis::SymbolPreviewFlag f1, QFlags<Qgis::SymbolPreviewFlag> f2);
 
+QFlags<Qgis::BrowserItemCapability> operator|(Qgis::BrowserItemCapability f1, QFlags<Qgis::BrowserItemCapability> f2);
+
+QFlags<Qgis::SublayerQueryFlag> operator|(Qgis::SublayerQueryFlag f1, QFlags<Qgis::SublayerQueryFlag> f2);
+
+QFlags<Qgis::SqlLayerDefinitionCapability> operator|(Qgis::SqlLayerDefinitionCapability f1, QFlags<Qgis::SqlLayerDefinitionCapability> f2);
 
 
 

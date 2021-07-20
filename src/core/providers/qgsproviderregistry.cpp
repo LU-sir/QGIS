@@ -18,10 +18,6 @@
 
 #include "qgsproviderregistry.h"
 
-#include <QString>
-#include <QDir>
-#include <QLibrary>
-
 #include "qgis.h"
 #include "qgsdataprovider.h"
 #include "qgsdataitemprovider.h"
@@ -32,8 +28,10 @@
 #include "qgsvectorlayer.h"
 #include "qgsvectortileprovidermetadata.h"
 #include "qgsproject.h"
+#include "qgsprovidersublayerdetails.h"
 #include "providers/memory/qgsmemoryprovider.h"
 #include "providers/gdal/qgsgdalprovider.h"
+#include "providers/ogr/qgsogrprovidermetadata.h"
 #include "providers/ogr/qgsogrprovider.h"
 #include "providers/meshmemory/qgsmeshmemorydataprovider.h"
 
@@ -48,6 +46,11 @@
 #include "qgswmsprovider.h"
 #include "qgspostgresprovider.h"
 #endif
+
+#include <QString>
+#include <QDir>
+#include <QLibrary>
+#include <QRegularExpression>
 
 static QgsProviderRegistry *sInstance = nullptr;
 
@@ -202,7 +205,7 @@ void QgsProviderRegistry::init()
 #if defined(Q_OS_WIN) || defined(__CYGWIN__)
   mLibraryDirectory.setNameFilters( QStringList( "*.dll" ) );
 #elif defined(ANDROID)
-  mLibraryDirectory.setNameFilters( QStringList( "*provider*.so" ) );
+  mLibraryDirectory.setNameFilters( QStringList( "*provider_*.so" ) );
 #else
   mLibraryDirectory.setNameFilters( QStringList( QStringLiteral( "*.so" ) ) );
 #endif
@@ -216,7 +219,7 @@ void QgsProviderRegistry::init()
 
   // provider file regex pattern, only files matching the pattern are loaded if the variable is defined
   QString filePattern = getenv( "QGIS_PROVIDER_FILE" );
-  QRegExp fileRegexp;
+  QRegularExpression fileRegexp;
   if ( !filePattern.isEmpty() )
   {
     fileRegexp.setPattern( filePattern );
@@ -227,9 +230,9 @@ void QgsProviderRegistry::init()
   const auto constEntryInfoList = mLibraryDirectory.entryInfoList();
   for ( const QFileInfo &fi : constEntryInfoList )
   {
-    if ( !fileRegexp.isEmpty() )
+    if ( !filePattern.isEmpty() )
     {
-      if ( fileRegexp.indexIn( fi.fileName() ) == -1 )
+      if ( fi.fileName().indexOf( fileRegexp ) == -1 )
       {
         QgsDebugMsg( "provider " + fi.fileName() + " skipped because doesn't match pattern " + filePattern );
         continue;
@@ -892,4 +895,16 @@ bool QgsProviderRegistry::uriIsBlocklisted( const QString &uri ) const
       return true;
   }
   return false;
+}
+
+QList<QgsProviderSublayerDetails> QgsProviderRegistry::querySublayers( const QString &uri, Qgis::SublayerQueryFlags flags, QgsFeedback *feedback ) const
+{
+  QList<QgsProviderSublayerDetails> res;
+  for ( auto it = mProviders.begin(); it != mProviders.end(); ++it )
+  {
+    res.append( it->second->querySublayers( uri, flags, feedback ) );
+    if ( feedback && feedback->isCanceled() )
+      break;
+  }
+  return res;
 }

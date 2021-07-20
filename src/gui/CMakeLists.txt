@@ -368,6 +368,8 @@ set(QGIS_GUI_SRCS
   providers/ogr/qgsogritemguiprovider.cpp
   providers/ogr/qgsgeopackageprojectstorageguiprovider.cpp
 
+  settings/qgssettingsregistrygui.cpp
+
   tableeditor/qgstableeditordialog.cpp
   tableeditor/qgstableeditorformattingwidget.cpp
   tableeditor/qgstableeditorwidget.cpp
@@ -570,6 +572,7 @@ set(QGIS_GUI_SRCS
   qgsproviderconnectioncombobox.cpp
   qgsproxystyle.cpp
   qgsquerybuilder.cpp
+  qgsqueryresultwidget.cpp
   qgsrangeslider.cpp
   qgsrasterformatsaveoptionswidget.cpp
   qgsrasterlayersaveasdialog.cpp
@@ -819,6 +822,7 @@ set(QGIS_GUI_HDRS
   qgsprovidersourcewidgetproviderregistry.h
   qgsproxystyle.h
   qgsquerybuilder.h
+  qgsqueryresultwidget.h
   qgsrangeslider.h
   qgsrasterformatsaveoptionswidget.h
   qgsrasterlayersaveasdialog.h
@@ -1239,6 +1243,8 @@ set(QGIS_GUI_HDRS
   symbology/qgssymbolwidgetcontext.h
   symbology/qgsvectorfieldsymbollayerwidget.h
 
+  settings/qgssettingsregistrygui.h
+
   tableeditor/qgstableeditordialog.h
   tableeditor/qgstableeditorformattingwidget.h
   tableeditor/qgstableeditorwidget.h
@@ -1260,24 +1266,27 @@ set(QGIS_GUI_PRIVATE_HDRS
   attributetable/qgsfeaturefilterwidget_p.h
 )
 
-find_package(Qt5 COMPONENTS Qml QuickWidgets REQUIRED)
+if (WITH_QT6)
+  find_package(Qt6 COMPONENTS Qml QuickWidgets REQUIRED)
+else()
+  find_package(Qt5 COMPONENTS Qml QuickWidgets REQUIRED)
+endif()
 
-if(Qt5Qml_FOUND)
-add_definitions(-DWITH_QML)
-set(QGIS_GUI_HDRS
-  ${QGIS_GUI_HDRS}
-  editorwidgets/qgsqmlwidgetwrapper.h
-)
+if(${QT_VERSION_BASE}Qml_FOUND)
+  add_definitions(-DWITH_QML)
+  set(QGIS_GUI_HDRS
+    ${QGIS_GUI_HDRS}
+    editorwidgets/qgsqmlwidgetwrapper.h
+  )
 endif()
 
 # for installing headers
 
-if(Qt5Qml_FOUND)
-
-set(QGIS_GUI_SRCS
-  ${QGIS_GUI_SRCS}
-  editorwidgets/qgsqmlwidgetwrapper.cpp
-)
+if(${QT_VERSION_BASE}Qml_FOUND)
+  set(QGIS_GUI_SRCS
+    ${QGIS_GUI_SRCS}
+    editorwidgets/qgsqmlwidgetwrapper.cpp
+  )
 endif()
 
 set_property(GLOBAL PROPERTY QGIS_GUI_HDRS ${QGIS_GUI_HDRS})
@@ -1322,6 +1331,7 @@ set(QGIS_GUI_UI_HDRS
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsprojectionselectorbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsrasterlayerpropertiesbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsquerybuilderbase.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsqueryresultwidgetbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgssqlcomposerdialogbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgssublayersdialogbase.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgstablewidgetuibase.h
@@ -1378,7 +1388,7 @@ endif()
 #############################################################
 # qgis_gui library
 
-add_library(qgis_gui SHARED
+add_library(qgis_gui ${LIBRARY_TYPE}
   ${QGIS_GUI_SRCS} ${QGIS_GUI_HDRS} ${QGIS_GUI_PRIVATE_HDRS}
 )
 
@@ -1420,9 +1430,10 @@ target_include_directories(qgis_gui PUBLIC
   ${CMAKE_SOURCE_DIR}/src/gui/providers/ogr
   ${CMAKE_SOURCE_DIR}/src/gui/pointcloud
   ${CMAKE_SOURCE_DIR}/src/gui/raster
+  ${CMAKE_SOURCE_DIR}/src/gui/settings
+  ${CMAKE_SOURCE_DIR}/src/gui/tableeditor
   ${CMAKE_SOURCE_DIR}/src/gui/vector
   ${CMAKE_SOURCE_DIR}/src/gui/vectortile
-  ${CMAKE_SOURCE_DIR}/src/gui/tableeditor
 
   ${CMAKE_BINARY_DIR}/src/gui
   ${CMAKE_BINARY_DIR}/src/ui
@@ -1489,21 +1500,26 @@ add_dependencies(qgis_gui ui)
 target_link_libraries(qgis_gui
   qgis_core
   qgis_native
-  ${Qt5UiTools_LIBRARIES}
+  ${${QT_VERSION_BASE}UiTools_LIBRARIES}
   ${QWT_LIBRARY}
   ${QSCINTILLA_LIBRARY}
-  ${Qt5QuickWidgets_LIBRARIES}
+  ${${QT_VERSION_BASE}QuickWidgets_LIBRARIES}
 )
 
-if (FORCE_STATIC_PROVIDERS)
+if (FORCE_STATIC_LIBS)
+  include_directories(
+    ${CMAKE_SOURCE_DIR}/src/providers/wms
+    ${CMAKE_SOURCE_DIR}/src/providers/postgres
+  )
+
   target_link_libraries(qgis_gui
-    wmsprovider_gui_a
-    postgresprovider_gui_a
+    provider_wms_gui_a
+    provider_postgres_gui_a
   )
 endif()
 
 if(ENABLE_MODELTEST)
-  target_link_libraries(qgis_gui ${Qt5Test_LIBRARIES})
+  target_link_libraries(qgis_gui ${${QT_VERSION_BASE}Test_LIBRARIES})
 endif()
 
 target_compile_definitions(qgis_gui PRIVATE "-DQT_NO_FOREACH")

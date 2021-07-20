@@ -104,15 +104,15 @@ QgsSymbolsListWidget::QgsSymbolsListWidget( QgsSymbol *symbol, QgsStyle *style, 
 
   stackedWidget->setCurrentIndex( 0 );
 
+  mSymbolUnitWidget->setUnits( QgsUnitTypes::RenderUnitList() << QgsUnitTypes::RenderMillimeters << QgsUnitTypes::RenderMetersInMapUnits << QgsUnitTypes::RenderMapUnits << QgsUnitTypes::RenderPixels
+                               << QgsUnitTypes::RenderPoints << QgsUnitTypes::RenderInches );
+
   if ( mSymbol )
   {
     updateSymbolInfo();
   }
 
   connect( mSymbolUnitWidget, &QgsUnitSelectionWidget::changed, this, &QgsSymbolsListWidget::mSymbolUnitWidget_changed );
-  mSymbolUnitWidget->setUnits( QgsUnitTypes::RenderUnitList() << QgsUnitTypes::RenderMillimeters << QgsUnitTypes::RenderMetersInMapUnits << QgsUnitTypes::RenderMapUnits << QgsUnitTypes::RenderPixels
-                               << QgsUnitTypes::RenderPoints << QgsUnitTypes::RenderInches );
-
   connect( mSymbolColorButton, &QgsColorButton::colorChanged, this, &QgsSymbolsListWidget::setSymbolColor );
 
   registerSymbolDataDefinedButton( opacityDDBtn, QgsSymbol::PropertyOpacity );
@@ -581,6 +581,7 @@ void QgsSymbolsListWidget::setSymbolFromStyle( const QString &name, QgsStyle::St
     mSymbol->appendSymbolLayer( sl );
   }
   mSymbol->setOpacity( s->opacity() );
+  mSymbol->setFlags( s->flags() );
 
   updateSymbolInfo();
   emit changed();

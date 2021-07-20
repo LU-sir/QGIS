@@ -21,6 +21,7 @@
 #include "qgsmaplayer.h"
 #include "qgsexception.h"
 #include "qgsabstractdatabaseproviderconnection.h"
+#include "qgsprovidersublayerdetails.h"
 
 QgsProviderMetadata::QgsProviderMetadata( QString const &key,
     QString const &description,
@@ -104,6 +105,11 @@ QList<QgsMapLayerType> QgsProviderMetadata::validLayerTypesForUri( const QString
 bool QgsProviderMetadata::uriIsBlocklisted( const QString & ) const
 {
   return false;
+}
+
+QList<QgsProviderSublayerDetails> QgsProviderMetadata::querySublayers( const QString &, Qgis::SublayerQueryFlags, QgsFeedback * ) const
+{
+  return QList<QgsProviderSublayerDetails>();
 }
 
 QgsDataProvider *QgsProviderMetadata::createProvider( const QString &uri,
@@ -333,8 +339,27 @@ QMap<QString, T *> QgsProviderMetadata::connections( bool cached )
 
 QgsMeshDriverMetadata::QgsMeshDriverMetadata() = default;
 
-QgsMeshDriverMetadata::QgsMeshDriverMetadata( const QString &name, const QString &description, const MeshDriverCapabilities &capabilities, const QString &writeDatasetOnfileSuffix )
-  : mName( name ), mDescription( description ), mCapabilities( capabilities ), mWriteDatasetOnFileSuffix( writeDatasetOnfileSuffix )
+QgsMeshDriverMetadata::QgsMeshDriverMetadata( const QString &name,
+    const QString &description,
+    const MeshDriverCapabilities &capabilities,
+    const QString &writeDatasetOnfileSuffix )
+  : mName( name )
+  , mDescription( description )
+  , mCapabilities( capabilities )
+  , mWriteDatasetOnFileSuffix( writeDatasetOnfileSuffix )
+{
+}
+
+QgsMeshDriverMetadata::QgsMeshDriverMetadata( const QString &name,
+    const QString &description,
+    const MeshDriverCapabilities &capabilities,
+    const QString &writeDatasetOnfileSuffix,
+    const QString &writeMeshFrameOnFileSuffix )
+  : mName( name )
+  , mDescription( description )
+  , mCapabilities( capabilities )
+  , mWriteDatasetOnFileSuffix( writeDatasetOnfileSuffix )
+  , mWriteMeshFrameOnFileSuffix( ( writeMeshFrameOnFileSuffix ) )
 {
 }
 
@@ -356,4 +381,9 @@ QString QgsMeshDriverMetadata::description() const
 QString QgsMeshDriverMetadata::writeDatasetOnFileSuffix() const
 {
   return mWriteDatasetOnFileSuffix;
+}
+
+QString QgsMeshDriverMetadata::writeMeshFrameOnFileSuffix() const
+{
+  return mWriteMeshFrameOnFileSuffix;
 }

@@ -17,6 +17,9 @@
 #include "qgsspatialiteconnection.h"
 #include "qgsspatialitedataitems.h"
 #include "qgsspatialitesourceselect.h"
+#include "qgsproviderregistry.h"
+#include "qgsprovidermetadata.h"
+#include "qgsspatialiteproviderconnection.h"
 
 #include "qgsapplication.h"
 #include "qgsmessageoutput.h"
@@ -33,18 +36,18 @@ void QgsSpatiaLiteDataItemGuiProvider::populateContextMenu( QgsDataItem *item, Q
 {
   if ( QgsSLRootItem *rootItem = qobject_cast< QgsSLRootItem * >( item ) )
   {
-    QAction *actionNew = new QAction( tr( "New Connection…" ), this );
+    QAction *actionNew = new QAction( tr( "New Connection…" ), menu );
     connect( actionNew, &QAction::triggered, this, [rootItem] { newConnection( rootItem ); } );
     menu->addAction( actionNew );
 
-    QAction *actionCreateDatabase = new QAction( tr( "Create Database…" ), this );
+    QAction *actionCreateDatabase = new QAction( tr( "Create Database…" ), menu );
     connect( actionCreateDatabase, &QAction::triggered, this, [rootItem] { createDatabase( rootItem ); } );
     menu->addAction( actionCreateDatabase );
   }
 
   if ( QgsSLConnectionItem *connItem = qobject_cast< QgsSLConnectionItem * >( item ) )
   {
-    QAction *actionDelete = new QAction( tr( "Delete" ), this );
+    QAction *actionDelete = new QAction( tr( "Delete" ), menu );
     connect( actionDelete, &QAction::triggered, this, [connItem] { deleteConnection( connItem ); } );
     menu->addAction( actionDelete );
   }
@@ -116,8 +119,9 @@ void QgsSpatiaLiteDataItemGuiProvider::createDatabase( QgsDataItem *item )
   QString errCause;
   if ( SpatiaLiteUtils::createDb( filename, errCause ) )
   {
-    // add connection
-    settings.setValue( "/SpatiaLite/connections/" + QFileInfo( filename ).fileName() + "/sqlitepath", filename );
+    QgsProviderMetadata *providerMetadata = QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "spatialite" ) );
+    QgsSpatiaLiteProviderConnection *providerConnection =  static_cast<QgsSpatiaLiteProviderConnection *>( providerMetadata->createConnection( filename ) );
+    providerMetadata->saveConnection( providerConnection, filename );
 
     item->refresh();
   }
@@ -134,7 +138,9 @@ void QgsSpatiaLiteDataItemGuiProvider::deleteConnection( QgsDataItem *item )
                               QMessageBox::Yes | QMessageBox::No, QMessageBox::No ) != QMessageBox::Yes )
     return;
 
-  QgsSpatiaLiteConnection::deleteConnection( item->name() );
+  QgsProviderMetadata *providerMetadata = QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "spatialite" ) );
+  providerMetadata->deleteConnection( item->name() );
+
   // the parent should be updated
   item->parent()->refreshConnections();
 }

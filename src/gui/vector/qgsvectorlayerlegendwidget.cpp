@@ -21,6 +21,7 @@
 #include <QTreeWidget>
 
 #include "qgsexpressionbuilderdialog.h"
+#include "qgsfilecontentsourcelineedit.h"
 #include "qgsmapcanvas.h"
 #include "qgsmaplayerlegend.h"
 #include "qgsrenderer.h"
@@ -71,10 +72,19 @@ QgsVectorLayerLegendWidget::QgsVectorLayerLegendWidget( QWidget *parent )
   labelLegendLayout->addWidget( mLabelLegendTreeWidget );
   mLabelLegendGroupBox->setLayout( labelLegendLayout );
 
+  mPlaceholderImageLabel = new QLabel( tr( "Legend placeholder image" ) );
+  mImageSourceLineEdit = new QgsImageSourceLineEdit();
+  mImageSourceLineEdit->setLastPathSettingsKey( QStringLiteral( "lastLegendPlaceholderDir" ) );
+  if ( mLayer )
+  {
+    mImageSourceLineEdit->setSource( mLayer->legendPlaceholderImage() );
+  }
 
 
   QVBoxLayout *layout = new QVBoxLayout;
   layout->setContentsMargins( 0, 0, 0, 0 );
+  layout->addWidget( mPlaceholderImageLabel );
+  layout->addWidget( mImageSourceLineEdit );
   layout->addWidget( mShowLabelLegendCheckBox );
   layout->addWidget( mLabelLegendGroupBox );
   layout->addWidget( mTextOnSymbolGroupBox );
@@ -122,7 +132,10 @@ void QgsVectorLayerLegendWidget::setLayer( QgsVectorLayer *layer )
   mTextOnSymbolGroupBox->setChecked( legend->textOnSymbolEnabled() );
   mTextOnSymbolFormatButton->setTextFormat( legend->textOnSymbolTextFormat() );
   populateLegendTreeView( legend->textOnSymbolContent() );
-
+  if ( mLayer )
+  {
+    mImageSourceLineEdit->setSource( mLayer->legendPlaceholderImage() );
+  }
 }
 
 void QgsVectorLayerLegendWidget::populateLabelLegendTreeWidget()
@@ -221,6 +234,8 @@ void QgsVectorLayerLegendWidget::applyToLayer()
     applyLabelLegend();
   }
 
+  mLayer->setLegendPlaceholderImage( mImageSourceLineEdit->source() );
+
   mLayer->setLegend( legend );
 }
 
@@ -274,7 +289,7 @@ void QgsVectorLayerLegendWidget::applyLabelLegend()
 
   QgsAbstractVectorLayerLabeling *labeling = layerLabeling->clone();
   QStringList ids = labeling->subProviders();
-  int nIterations = std::min( ids.size(), mLabelLegendTreeWidget->topLevelItemCount() );
+  int nIterations = std::min< int >( ids.size(), mLabelLegendTreeWidget->topLevelItemCount() );
 
   for ( int i = 0; i < nIterations; ++i )
   {

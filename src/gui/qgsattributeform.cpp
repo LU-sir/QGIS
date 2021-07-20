@@ -65,6 +65,7 @@
 #include <QMessageBox>
 #include <QToolButton>
 #include <QMenu>
+#include <QSvgWidget>
 
 int QgsAttributeForm::sFormCounter = 0;
 
@@ -622,13 +623,13 @@ void QgsAttributeForm::pushSelectedFeaturesMessage()
   {
     mMessageBar->pushMessage( QString(),
                               tr( "%n matching feature(s) selected", "matching features", count ),
-                              Qgis::Info );
+                              Qgis::MessageLevel::Info );
   }
   else
   {
     mMessageBar->pushMessage( QString(),
                               tr( "No matching features found" ),
-                              Qgis::Info );
+                              Qgis::MessageLevel::Info );
   }
 }
 
@@ -636,10 +637,10 @@ void QgsAttributeForm::displayWarning( const QString &message )
 {
   mMessageBar->pushMessage( QString(),
                             message,
-                            Qgis::Warning );
+                            Qgis::MessageLevel::Warning );
 }
 
-void QgsAttributeForm::runSearchSelect( QgsVectorLayer::SelectBehavior behavior )
+void QgsAttributeForm::runSearchSelect( Qgis::SelectBehavior behavior )
 {
   QString filter = createFilterExpression();
   if ( filter.isEmpty() )
@@ -653,22 +654,22 @@ void QgsAttributeForm::runSearchSelect( QgsVectorLayer::SelectBehavior behavior 
 
 void QgsAttributeForm::searchSetSelection()
 {
-  runSearchSelect( QgsVectorLayer::SetSelection );
+  runSearchSelect( Qgis::SelectBehavior::SetSelection );
 }
 
 void QgsAttributeForm::searchAddToSelection()
 {
-  runSearchSelect( QgsVectorLayer::AddToSelection );
+  runSearchSelect( Qgis::SelectBehavior::AddToSelection );
 }
 
 void QgsAttributeForm::searchRemoveFromSelection()
 {
-  runSearchSelect( QgsVectorLayer::RemoveFromSelection );
+  runSearchSelect( Qgis::SelectBehavior::RemoveFromSelection );
 }
 
 void QgsAttributeForm::searchIntersectSelection()
 {
-  runSearchSelect( QgsVectorLayer::IntersectSelection );
+  runSearchSelect( Qgis::SelectBehavior::IntersectSelection );
 }
 
 bool QgsAttributeForm::saveMultiEdits()
@@ -730,12 +731,12 @@ bool QgsAttributeForm::saveMultiEdits()
   {
     mLayer->endEditCommand();
     mLayer->triggerRepaint();
-    mMultiEditMessageBarItem = new QgsMessageBarItem( tr( "Attribute changes for multiple features applied." ), Qgis::Success, -1 );
+    mMultiEditMessageBarItem = new QgsMessageBarItem( tr( "Attribute changes for multiple features applied." ), Qgis::MessageLevel::Success, -1 );
   }
   else
   {
     mLayer->destroyEditCommand();
-    mMultiEditMessageBarItem = new QgsMessageBarItem( tr( "Changes could not be applied." ), Qgis::Warning, 0 );
+    mMultiEditMessageBarItem = new QgsMessageBarItem( tr( "Changes could not be applied." ), Qgis::MessageLevel::Warning, 0 );
   }
 
   if ( !mButtonBox->isVisible() )
@@ -938,7 +939,7 @@ void QgsAttributeForm::onAttributeChanged( const QVariant &value, const QVariant
         connect( msgLabel, &QLabel::linkActivated, this, &QgsAttributeForm::multiEditMessageClicked );
         clearMultiEditMessages();
 
-        mMultiEditUnsavedMessageBarItem = new QgsMessageBarItem( msgLabel, Qgis::Warning );
+        mMultiEditUnsavedMessageBarItem = new QgsMessageBarItem( msgLabel, Qgis::MessageLevel::Warning );
         if ( !mButtonBox->isVisible() )
           mMessageBar->pushItem( mMultiEditUnsavedMessageBarItem );
 
@@ -1332,6 +1333,11 @@ void QgsAttributeForm::parentFormValueChanged( const QString &attribute, const Q
   }
 }
 
+bool QgsAttributeForm::needsGeometry() const
+{
+  return mNeedsGeometry;
+}
+
 void QgsAttributeForm::synchronizeState()
 {
   bool isEditable = ( mFeature.isValid()
@@ -1366,7 +1372,7 @@ void QgsAttributeForm::synchronizeState()
     {
       if ( !mValidConstraints && !mConstraintsFailMessageBarItem )
       {
-        mConstraintsFailMessageBarItem = new QgsMessageBarItem( tr( "Changes to this form will not be saved. %n field(s) don't meet their constraints.", "invalid fields", invalidFields.size() ), Qgis::Warning, -1 );
+        mConstraintsFailMessageBarItem = new QgsMessageBarItem( tr( "Changes to this form will not be saved. %n field(s) don't meet their constraints.", "invalid fields", invalidFields.size() ), Qgis::MessageLevel::Warning, -1 );
         mMessageBar->pushItem( mConstraintsFailMessageBarItem );
       }
       else if ( mValidConstraints && mConstraintsFailMessageBarItem )
@@ -1396,6 +1402,7 @@ void QgsAttributeForm::init()
 
   // Cleanup of any previously shown widget, we start from scratch
   QWidget *formWidget = nullptr;
+  mNeedsGeometry = false;
 
   bool buttonBoxVisible = true;
   // Cleanup button box but preserve visibility
@@ -2132,7 +2139,7 @@ QgsAttributeForm::WidgetInfo QgsAttributeForm::createWidgetFromDef( const QgsAtt
           }
         }
 
-        if ( widgetInfo.labelText.isNull() )
+        if ( widgetInfo.labelText.isNull() || ! widgetInfo.showLabel )
         {
           gbLayout->addWidget( widgetInfo.widget, row, column, 1, 2 );
           column += 2;
@@ -2198,6 +2205,7 @@ QgsAttributeForm::WidgetInfo QgsAttributeForm::createWidgetFromDef( const QgsAtt
 
       newWidgetInfo.labelText = QString();
       newWidgetInfo.labelOnTop = true;
+      newWidgetInfo.showLabel = widgetDef->showLabel();
       break;
     }
 
@@ -2233,6 +2241,7 @@ QgsAttributeForm::WidgetInfo QgsAttributeForm::createWidgetFromDef( const QgsAtt
       newWidgetInfo.labelText = elementDef->name();
       newWidgetInfo.labelOnTop = true;
       newWidgetInfo.showLabel = widgetDef->showLabel();
+      mNeedsGeometry |= htmlWrapper->needsGeometry();
       break;
     }
 
@@ -2240,8 +2249,6 @@ QgsAttributeForm::WidgetInfo QgsAttributeForm::createWidgetFromDef( const QgsAtt
       QgsDebugMsg( QStringLiteral( "Unknown attribute editor widget type encountered..." ) );
       break;
   }
-
-  newWidgetInfo.showLabel = widgetDef->showLabel();
 
   return newWidgetInfo;
 }

@@ -63,11 +63,13 @@ QgsPointClusterRendererWidget::QgsPointClusterRendererWidget( QgsVectorLayer *la
 
   if ( renderer )
   {
-    mRenderer = QgsPointClusterRenderer::convertFromRenderer( renderer );
+    mRenderer.reset( QgsPointClusterRenderer::convertFromRenderer( renderer ) );
   }
   if ( !mRenderer )
   {
-    mRenderer = new QgsPointClusterRenderer();
+    mRenderer = std::make_unique< QgsPointClusterRenderer >();
+    if ( renderer )
+      renderer->copyRendererData( mRenderer.get() );
   }
 
   blockAllSignals( true );
@@ -109,14 +111,11 @@ QgsPointClusterRendererWidget::QgsPointClusterRendererWidget( QgsVectorLayer *la
   mCenterSymbolToolButton->registerExpressionContextGenerator( this );
 }
 
-QgsPointClusterRendererWidget::~QgsPointClusterRendererWidget()
-{
-  delete mRenderer;
-}
+QgsPointClusterRendererWidget::~QgsPointClusterRendererWidget() = default;
 
 QgsFeatureRenderer *QgsPointClusterRendererWidget::renderer()
 {
-  return mRenderer;
+  return mRenderer.get();
 }
 
 void QgsPointClusterRendererWidget::setContext( const QgsSymbolWidgetContext &context )
@@ -165,6 +164,7 @@ void QgsPointClusterRendererWidget::mRendererSettingsButton_clicked()
     QgsSymbolWidgetContext context = mContext;
     context.setAdditionalExpressionContextScopes( scopes );
     w->setContext( context );
+    w->disableSymbolLevels();
     connect( w, &QgsPanelWidget::widgetChanged, this, &QgsPointClusterRendererWidget::updateRendererFromWidget );
     w->setDockMode( this->dockMode() );
     openPanel( w );

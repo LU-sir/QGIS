@@ -409,6 +409,7 @@ void TestQgsGeometryChecks::testDuplicateCheck()
   layers.insert( "point_layer.shp", "" );
   layers.insert( "line_layer.shp", "" );
   layers.insert( "polygon_layer.shp", "" );
+  layers.insert( "polygon_layer_empty_geometries.geojson", "" );
   auto testContext = createTestContext( dir, layers );
 
   // Test detection
@@ -1064,7 +1065,7 @@ void TestQgsGeometryChecks::testSelfIntersectionCheck()
   // Test fixes
   QgsFeature f;
 
-  int nextId = testContext.second[errs1[0]->layerId()]->layer()->featureCount();
+  QgsFeatureId nextId = testContext.second[errs1[0]->layerId()]->layer()->featureCount();
   QVERIFY( fixCheckError( testContext.second,  errs1[0],
                           QgsGeometrySelfIntersectionCheck::ToSingleObjects, QgsGeometryCheckError::StatusFixed,
   {
@@ -1350,14 +1351,26 @@ void TestQgsGeometryChecks::cleanupTestContext( QPair<QgsGeometryCheckContext *,
 
 void TestQgsGeometryChecks::listErrors( const QList<QgsGeometryCheckError *> &checkErrors, const QStringList &messages ) const
 {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
   QTextStream( stdout ) << " - Check result:" << endl;
+#else
+  QTextStream( stdout ) << " - Check result:" << Qt::endl;
+#endif
   for ( const QgsGeometryCheckError *error : checkErrors )
   {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     QTextStream( stdout ) << "   * " << error->layerId() << ":" << error->featureId() << " @[" << error->vidx().part << ", " << error->vidx().ring << ", " << error->vidx().vertex << "](" << error->location().x() << ", " << error->location().y() << ") = " << error->value().toString() << endl;
+#else
+    QTextStream( stdout ) << "   * " << error->layerId() << ":" << error->featureId() << " @[" << error->vidx().part << ", " << error->vidx().ring << ", " << error->vidx().vertex << "](" << error->location().x() << ", " << error->location().y() << ") = " << error->value().toString() << Qt::endl;
+#endif
   }
   if ( !messages.isEmpty() )
   {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     QTextStream( stdout ) << " - Check messages:" << endl << "   * " << messages.join( "\n   * " ) << endl;
+#else
+    QTextStream( stdout ) << " - Check messages:" << Qt::endl << "   * " << messages.join( "\n   * " ) << Qt::endl;
+#endif
   }
 }
 
@@ -1403,10 +1416,18 @@ QList<QgsGeometryCheckError *> TestQgsGeometryChecks::searchCheckErrors( const Q
 
 bool TestQgsGeometryChecks::fixCheckError( QMap<QString, QgsFeaturePool *> featurePools, QgsGeometryCheckError *error, int method, const QgsGeometryCheckError::Status &expectedStatus, const QVector<Change> &expectedChanges, const QMap<QString, int> &mergeAttrs )
 {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
   QTextStream( stdout ) << " - Fixing " << error->layerId() << ":" << error->featureId() << " @[" << error->vidx().part << ", " << error->vidx().ring << ", " << error->vidx().vertex << "](" << error->location().x() << ", " << error->location().y() << ") = " << error->value().toString() << endl;
+#else
+  QTextStream( stdout ) << " - Fixing " << error->layerId() << ":" << error->featureId() << " @[" << error->vidx().part << ", " << error->vidx().ring << ", " << error->vidx().vertex << "](" << error->location().x() << ", " << error->location().y() << ") = " << error->value().toString() << Qt::endl;
+#endif
   QgsGeometryCheck::Changes changes;
   error->check()->fixError( featurePools, error, method, mergeAttrs, changes );
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
   QTextStream( stdout ) << "   * Fix status: " << error->status() << endl;
+#else
+  QTextStream( stdout ) << "   * Fix status: " << error->status() << Qt::endl;
+#endif
   if ( error->status() != expectedStatus )
   {
     return false;
@@ -1420,12 +1441,20 @@ bool TestQgsGeometryChecks::fixCheckError( QMap<QString, QgsFeaturePool *> featu
     {
       for ( const QgsGeometryCheck::Change &change : changes[layerId][fid] )
       {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
         QTextStream( stdout ) << "   * Change: " << layerId << ":" << fid << " :: " << strChangeWhat[change.what] << ", " << strChangeType[change.type] << ", " << change.vidx.part << ":" << change.vidx.ring << ":" << change.vidx.vertex << endl;
+#else
+        QTextStream( stdout ) << "   * Change: " << layerId << ":" << fid << " :: " << strChangeWhat[change.what] << ", " << strChangeType[change.type] << ", " << change.vidx.part << ":" << change.vidx.ring << ":" << change.vidx.vertex << Qt::endl;
+#endif
       }
       totChanges += changes[layerId][fid].size();
     }
   }
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
   QTextStream( stdout ) << "   * Num changes: " << totChanges << ", expected num changes: " << expectedChanges.size() << endl;
+#else
+  QTextStream( stdout ) << "   * Num changes: " << totChanges << ", expected num changes: " << expectedChanges.size() << Qt::endl;
+#endif
   if ( expectedChanges.size() != totChanges )
   {
     return false;

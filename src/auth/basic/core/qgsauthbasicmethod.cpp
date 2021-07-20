@@ -20,12 +20,18 @@
 #include "qgslogger.h"
 #include "qgsapplication.h"
 
+#ifdef HAVE_GUI
+#include "qgsauthbasicedit.h"
+#endif
+
 #include <QNetworkProxy>
 #include <QMutexLocker>
+#include <QRegularExpression>
 #include <QUuid>
 
-static const QString AUTH_METHOD_KEY = QStringLiteral( "Basic" );
-static const QString AUTH_METHOD_DESCRIPTION = QStringLiteral( "Basic authentication" );
+const QString QgsAuthBasicMethod::AUTH_METHOD_KEY = QStringLiteral( "Basic" );
+const QString QgsAuthBasicMethod::AUTH_METHOD_DESCRIPTION = QStringLiteral( "Basic authentication" );
+const QString QgsAuthBasicMethod::AUTH_METHOD_DISPLAY_DESCRIPTION = tr( "Basic authentication" );
 
 QMap<QString, QgsAuthMethodConfig> QgsAuthBasicMethod::sAuthConfigCache = QMap<QString, QgsAuthMethodConfig>();
 
@@ -60,8 +66,9 @@ QString QgsAuthBasicMethod::description() const
 
 QString QgsAuthBasicMethod::displayDescription() const
 {
-  return tr( "Basic authentication" );
+  return AUTH_METHOD_DISPLAY_DESCRIPTION;
 }
+
 
 bool QgsAuthBasicMethod::updateNetworkRequest( QNetworkRequest &request, const QString &authcfg,
     const QString &dataprovider )
@@ -106,7 +113,8 @@ bool QgsAuthBasicMethod::updateDataSourceUriItems( QStringList &connectionItems,
   }
 
   QString sslMode = QStringLiteral( "prefer" );
-  int sslModeIdx = connectionItems.indexOf( QRegExp( "^sslmode=.*" ) );
+  const thread_local QRegularExpression sslModeRegExp( "^sslmode=.*" );
+  int sslModeIdx = connectionItems.indexOf( sslModeRegExp );
   if ( sslModeIdx != -1 )
   {
     sslMode = connectionItems.at( sslModeIdx ).split( '=' ).at( 1 );
@@ -165,7 +173,7 @@ bool QgsAuthBasicMethod::updateDataSourceUriItems( QStringList &connectionItems,
         }
         else if ( uri.startsWith( QLatin1String( "SDE:" ) ) )
         {
-          uri = uri.replace( QRegExp( ",$" ), QStringLiteral( ",%1,%2" ).arg( username, password ) );
+          uri = uri.replace( QRegularExpression( ",$" ), QStringLiteral( ",%1,%2" ).arg( username, password ) );
         }
         else if ( uri.startsWith( QLatin1String( "IDB" ) ) )
         {
@@ -203,7 +211,7 @@ bool QgsAuthBasicMethod::updateDataSourceUriItems( QStringList &connectionItems,
         }
         else if ( uri.startsWith( QLatin1String( "ODBC:" ) ) )
         {
-          uri = uri.replace( QRegExp( "^ODBC:@?" ), "ODBC:" + username + '/' + password + '@' );
+          uri = uri.replace( QRegularExpression( "^ODBC:@?" ), "ODBC:" + username + '/' + password + '@' );
         }
         else if ( uri.startsWith( QLatin1String( "couchdb" ) )
                   || uri.startsWith( QLatin1String( "DODS" ) )
@@ -234,7 +242,8 @@ bool QgsAuthBasicMethod::updateDataSourceUriItems( QStringList &connectionItems,
   else // Not-ogr
   {
     QString userparam = "user='" + escapeUserPass( username ) + '\'';
-    int userindx = connectionItems.indexOf( QRegExp( "^user='.*" ) );
+    const thread_local QRegularExpression userRegExp( "^user='.*" );
+    int userindx = connectionItems.indexOf( userRegExp );
     if ( userindx != -1 )
     {
       connectionItems.replace( userindx, userparam );
@@ -245,7 +254,8 @@ bool QgsAuthBasicMethod::updateDataSourceUriItems( QStringList &connectionItems,
     }
 
     QString passparam = "password='" + escapeUserPass( password ) + '\'';
-    int passindx = connectionItems.indexOf( QRegExp( "^password='.*" ) );
+    const thread_local QRegularExpression passRegExp( "^password='.*" );
+    int passindx = connectionItems.indexOf( passRegExp );
     if ( passindx != -1 )
     {
       connectionItems.replace( passindx, passparam );
@@ -257,7 +267,8 @@ bool QgsAuthBasicMethod::updateDataSourceUriItems( QStringList &connectionItems,
     // add extra CAs
     if ( ! caparam.isEmpty() )
     {
-      int sslcaindx = connectionItems.indexOf( QRegExp( "^sslrootcert='.*" ) );
+      const thread_local QRegularExpression sslcaRegExp( "^sslrootcert='.*" );
+      int sslcaindx = connectionItems.indexOf( sslcaRegExp );
       if ( sslcaindx != -1 )
       {
         connectionItems.replace( sslcaindx, caparam );
@@ -312,6 +323,13 @@ void QgsAuthBasicMethod::updateMethodConfig( QgsAuthMethodConfig &mconfig )
 
   // TODO: add updates as method version() increases due to config storage changes
 }
+
+#ifdef HAVE_GUI
+QWidget *QgsAuthBasicMethod::editWidget( QWidget *parent ) const
+{
+  return new QgsAuthBasicEdit( parent );
+}
+#endif
 
 void QgsAuthBasicMethod::clearCachedConfig( const QString &authcfg )
 {
@@ -375,42 +393,13 @@ QString QgsAuthBasicMethod::escapeUserPass( const QString &val, QChar delim ) co
 // Plugin externals
 //////////////////////////////////////////////
 
-/**
- * Required class factory to return a pointer to a newly created object
- */
-QGISEXTERN QgsAuthBasicMethod *classFactory()
-{
-  return new QgsAuthBasicMethod();
-}
 
-/**
- * Required key function (used to map the plugin to a data store type)
- */
-QGISEXTERN QString authMethodKey()
+#ifndef HAVE_STATIC_PROVIDERS
+QGISEXTERN QgsAuthMethodMetadata *authMethodMetadataFactory()
 {
-  return AUTH_METHOD_KEY;
+  return new QgsAuthBasicMethodMetadata();
 }
+#endif
 
-/**
- * Required description function
- */
-QGISEXTERN QString description()
-{
-  return AUTH_METHOD_DESCRIPTION;
-}
 
-/**
- * Required isAuthMethod function. Used to determine if this shared library
- * is an authentication method plugin
- */
-QGISEXTERN bool isAuthMethod()
-{
-  return true;
-}
 
-/**
- * Required cleanup function
- */
-QGISEXTERN void cleanupAuthMethod() // pass QgsAuthMethod *method, then delete method  ?
-{
-}

@@ -404,8 +404,12 @@ class CORE_EXPORT QgsApplication : public QApplication
     //! Returns the path to user's style.
     static QString userStylePath();
 
-    //! Returns the short name regular expression for line edit validator
-    static QRegExp shortNameRegExp();
+    /**
+     * Returns the short name regular expression for line edit validator
+     * \note This functionality was previously available as `shortNameRegExp` for QGIS <= 3.20
+     * \since QGIS 3.22
+     */
+    static QRegularExpression shortNameRegularExpression();
 
     /**
      * Returns the user's operating system login account name.
@@ -934,11 +938,18 @@ class CORE_EXPORT QgsApplication : public QApplication
     int maxConcurrentConnectionsPerPool() const;
 
     /**
-     * Set translation
+     * Set translation locale code
      *
      * \since QGIS 3.4
      */
     static void setTranslation( const QString &translation );
+
+    /**
+     * Returns the current application translation locale code
+     * \see setTranslation()
+     * \since QGIS 3.22
+     */
+    QString translation() const;
 
     /**
      * Emits the signal to collect all the strings of .qgs to be included in ts file
@@ -1011,6 +1022,7 @@ class CORE_EXPORT QgsApplication : public QApplication
 
     QTranslator *mQgisTranslator = nullptr;
     QTranslator *mQtTranslator = nullptr;
+    QTranslator *mQtBaseTranslator = nullptr;
 
     QgsDataItemProviderRegistry *mDataItemProviderRegistry = nullptr;
     QgsAuthManager *mAuthManager = nullptr;

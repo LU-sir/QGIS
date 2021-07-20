@@ -15,6 +15,21 @@
  *                                                                         *
  ***************************************************************************/
 
+#include "qgis.h"
+#include "qgsdataitem.h"
+#include "qgsapplication.h"
+#include "qgsdataitemprovider.h"
+#include "qgsdataitemproviderregistry.h"
+#include "qgsdataprovider.h"
+#include "qgslogger.h"
+#include "qgsproviderregistry.h"
+#include "qgsconfig.h"
+#include "qgssettings.h"
+#include "qgsanimatedicon.h"
+#include "qgsproject.h"
+#include "qgsvectorlayer.h"
+#include "qgsprovidermetadata.h"
+
 #include <QApplication>
 #include <QtConcurrentMap>
 #include <QtConcurrentRun>
@@ -32,21 +47,6 @@
 #include <mutex>
 #include <QRegularExpression>
 
-#include "qgis.h"
-#include "qgsdataitem.h"
-#include "qgsapplication.h"
-#include "qgsdataitemprovider.h"
-#include "qgsdataitemproviderregistry.h"
-#include "qgsdataprovider.h"
-#include "qgslogger.h"
-#include "qgsproviderregistry.h"
-#include "qgsconfig.h"
-#include "qgssettings.h"
-#include "qgsanimatedicon.h"
-#include "qgsproject.h"
-#include "qgsvectorlayer.h"
-#include "qgsprovidermetadata.h"
-
 // use GDAL VSI mechanism
 #define CPL_SUPRESS_CPLUSPLUS  //#spellok
 #include "cpl_vsi.h"
@@ -54,17 +54,13 @@
 
 QgsAnimatedIcon *QgsDataItem::sPopulatingIcon = nullptr;
 
-QgsDataItem::QgsDataItem( QgsDataItem::Type type, QgsDataItem *parent, const QString &name, const QString &path, const QString &providerKey )
+QgsDataItem::QgsDataItem( Qgis::BrowserItemType type, QgsDataItem *parent, const QString &name, const QString &path, const QString &providerKey )
 // Do not pass parent to QObject, Qt would delete this when parent is deleted
   : mType( type )
-  , mCapabilities( NoCapabilities )
   , mParent( parent )
-  , mState( NotPopulated )
   , mName( name )
   , mProviderKey( providerKey )
   , mPath( path )
-  , mDeferredDelete( false )
-  , mFutureWatcher( nullptr )
 {
 }
 
@@ -93,7 +89,8 @@ QgsDataItem::~QgsDataItem()
 
 QString QgsDataItem::pathComponent( const QString &string )
 {
-  return QString( string ).replace( QRegExp( "[\\\\/]" ), QStringLiteral( "|" ) );
+  const thread_local QRegularExpression rx( "[\\\\/]" );
+  return QString( string ).replace( rx, QStringLiteral( "|" ) );
 }
 
 QVariant QgsDataItem::sortKey() const
@@ -164,7 +161,7 @@ QgsAbstractDatabaseProviderConnection *QgsDataItem::databaseConnection() const
 
 QIcon QgsDataItem::icon()
 {
-  if ( state() == Populating && sPopulatingIcon )
+  if ( state() == Qgis::BrowserItemState::Populating && sPopulatingIcon )
     return sPopulatingIcon->icon();
 
   if ( !mIcon.isNull() )
@@ -191,18 +188,18 @@ QVector<QgsDataItem *> QgsDataItem::createChildren()
 
 void QgsDataItem::populate( bool foreground )
 {
-  if ( state() == Populated || state() == Populating )
+  if ( state() == Qgis::BrowserItemState::Populated || state() == Qgis::BrowserItemState::Populating )
     return;
 
   QgsDebugMsgLevel( "mPath = " + mPath, 2 );
 
-  if ( capabilities2() & QgsDataItem::Fast || foreground )
+  if ( capabilities2() & Qgis::BrowserItemCapability::Fast || foreground )
   {
     populate( createChildren() );
   }
   else
   {
-    setState( Populating );
+    setState( Qgis::BrowserItemState::Populating );
     // The watcher must not be created with item (in constructor) because the item may be created in thread and the watcher created in thread does not work correctly.
     if ( !mFutureWatcher )
     {
@@ -276,7 +273,7 @@ void QgsDataItem::populate( const QVector<QgsDataItem *> &children )
     // update after thread finished -> refresh
     addChildItem( child, true );
   }
-  setState( Populated );
+  setState( Qgis::BrowserItemState::Populated );
 }
 
 void QgsDataItem::depopulate()
@@ -290,23 +287,23 @@ void QgsDataItem::depopulate()
     child->depopulate(); // recursive
     deleteChildItem( child );
   }
-  setState( NotPopulated );
+  setState( Qgis::BrowserItemState::NotPopulated );
 }
 
 void QgsDataItem::refresh()
 {
-  if ( state() == Populating )
+  if ( state() == Qgis::BrowserItemState::Populating )
     return;
 
   QgsDebugMsgLevel( "mPath = " + mPath, 3 );
 
-  if ( capabilities2() & QgsDataItem::Fast )
+  if ( capabilities2() & Qgis::BrowserItemCapability::Fast )
   {
     refresh( createChildren() );
   }
   else
   {
-    setState( Populating );
+    setState( Qgis::BrowserItemState::Populating );
     if ( !mFutureWatcher )
     {
       mFutureWatcher = new QFutureWatcher< QVector <QgsDataItem *> >( this );
@@ -364,7 +361,7 @@ void QgsDataItem::refresh( const QVector<QgsDataItem *> &children )
     if ( index >= 0 )
     {
       // Refresh recursively (some providers may create more generations of descendants)
-      if ( !( child->capabilities2() & QgsDataItem::Fertile ) )
+      if ( !( child->capabilities2() & Qgis::BrowserItemCapability::Fertile ) )
       {
         // The child cannot createChildren() itself
         mChildren.value( index )->refresh( child->children() );
@@ -375,7 +372,7 @@ void QgsDataItem::refresh( const QVector<QgsDataItem *> &children )
     }
     addChildItem( child, true );
   }
-  setState( Populated );
+  setState( Qgis::BrowserItemState::Populated );
 }
 
 QString QgsDataItem::providerKey() const
@@ -394,7 +391,7 @@ int QgsDataItem::rowCount()
 }
 bool QgsDataItem::hasChildren()
 {
-  return ( state() == Populated ? !mChildren.isEmpty() : true );
+  return ( state() == Qgis::BrowserItemState::Populated ? !mChildren.isEmpty() : true );
 }
 
 bool QgsDataItem::layerCollection() const
@@ -423,11 +420,11 @@ void QgsDataItem::setParent( QgsDataItem *parent )
 void QgsDataItem::addChildItem( QgsDataItem *child, bool refresh )
 {
   Q_ASSERT( child );
-  QgsDebugMsgLevel( QStringLiteral( "path = %1 add child #%2 - %3 - %4" ).arg( mPath ).arg( mChildren.size() ).arg( child->mName ).arg( child->mType ), 3 );
+  QgsDebugMsgLevel( QStringLiteral( "path = %1 add child #%2 - %3 - %4" ).arg( mPath ).arg( mChildren.size() ).arg( child->mName ).arg( qgsEnumValueToKey< Qgis::BrowserItemType >( child->mType ) ), 3 );
 
   //calculate position to insert child
   int i;
-  if ( type() == Directory )
+  if ( type() == Qgis::BrowserItemType::Directory )
   {
     for ( i = 0; i < mChildren.size(); i++ )
     {
@@ -529,20 +526,25 @@ bool QgsDataItem::rename( const QString & )
   return false;
 }
 
-QgsDataItem::State QgsDataItem::state() const
+void QgsDataItem::setCapabilities( int capabilities )
+{
+  setCapabilities( static_cast< Qgis::BrowserItemCapabilities >( capabilities ) );
+}
+
+Qgis::BrowserItemState QgsDataItem::state() const
 {
   return mState;
 }
 
-void QgsDataItem::setState( State state )
+void QgsDataItem::setState( Qgis::BrowserItemState state )
 {
-  QgsDebugMsgLevel( QStringLiteral( "item %1 set state %2 -> %3" ).arg( path() ).arg( this->state() ).arg( state ), 3 );
+  QgsDebugMsgLevel( QStringLiteral( "item %1 set state %2 -> %3" ).arg( path() ).arg( qgsEnumValueToKey< Qgis::BrowserItemState >( this->state() ) ).arg( qgsEnumValueToKey< Qgis::BrowserItemState >( state ) ), 3 );
   if ( state == mState )
     return;
 
-  State oldState = mState;
+  Qgis::BrowserItemState oldState = mState;
 
-  if ( state == Populating ) // start loading
+  if ( state == Qgis::BrowserItemState::Populating ) // start loading
   {
     if ( !sPopulatingIcon )
     {
@@ -552,7 +554,7 @@ void QgsDataItem::setState( State state )
 
     sPopulatingIcon->connectFrameChanged( this, &QgsDataItem::updateIcon );
   }
-  else if ( mState == Populating && sPopulatingIcon ) // stop loading
+  else if ( mState == Qgis::BrowserItemState::Populating && sPopulatingIcon ) // stop loading
   {
     sPopulatingIcon->disconnectFrameChanged( this, &QgsDataItem::updateIcon );
   }
@@ -561,7 +563,7 @@ void QgsDataItem::setState( State state )
   mState = state;
 
   emit stateChanged( this, oldState );
-  if ( state == Populated )
+  if ( state == Qgis::BrowserItemState::Populated )
     updateIcon();
 }
 
@@ -572,10 +574,10 @@ QList<QMenu *> QgsDataItem::menus( QWidget *parent )
 }
 
 QgsErrorItem::QgsErrorItem( QgsDataItem *parent, const QString &error, const QString &path )
-  : QgsDataItem( QgsDataItem::Error, parent, error, path )
+  : QgsDataItem( Qgis::BrowserItemType::Error, parent, error, path )
 {
   mIconName = QStringLiteral( "/mIconDelete.svg" );
 
-  setState( Populated ); // no more children
+  setState( Qgis::BrowserItemState::Populated ); // no more children
 }
 

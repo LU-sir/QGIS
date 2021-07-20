@@ -62,7 +62,7 @@
 #include <qvariant.h>
 #include <qdatetime.h>
 #include <qmetatype.h>
-#include <qregexp.h>
+#include <qregularexpression.h>
 #include <qshareddata.h>
 #include <qsqlerror.h>
 #include <qsqlfield.h>
@@ -3757,7 +3757,11 @@ bool QOCISpatialDriver::hasFeature( DriverFeature f ) const
 static void qParseOpts( const QString &options, QOCISpatialDriverPrivate *d )
 {
   ENTER
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
   const QStringList opts( options.split( QLatin1Char( ';' ), QString::SkipEmptyParts ) );
+#else
+  const QStringList opts( options.split( QLatin1Char( ';' ), Qt::SkipEmptyParts ) );
+#endif
   for ( int i = 0; i < opts.count(); ++i )
   {
     const QString tmp( opts.at( i ) );
@@ -3899,9 +3903,10 @@ bool QOCISpatialDriver::open( const QString &db,
   {
     QString versionStr;
     versionStr = QString( reinterpret_cast<const QChar *>( vertxt ) );
-    QRegExp vers( QLatin1String( "([0-9]+)\\.[0-9\\.]+[0-9]" ) );
-    if ( vers.indexIn( versionStr ) >= 0 )
-      d->serverVersion = vers.cap( 1 ).toInt();
+    QRegularExpression vers( QLatin1String( "([0-9]+)\\.[0-9\\.]+[0-9]" ) );
+    QRegularExpressionMatch match = vers.match( versionStr );
+    if ( match.hasMatch() )
+      d->serverVersion = match.captured( 1 ).toInt();
     if ( d->serverVersion == 0 )
       d->serverVersion = -1;
   }

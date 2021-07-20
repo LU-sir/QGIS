@@ -43,6 +43,8 @@ class QgsRasterDataProvider;
 class QgsMeshDataProvider;
 class QgsAbstractDatabaseProviderConnection;
 class QgsLayerMetadata;
+class QgsProviderSublayerDetails;
+class QgsFeedback;
 
 struct QgsMesh;
 
@@ -83,11 +85,30 @@ class CORE_EXPORT QgsMeshDriverMetadata
      * \param description short description of the driver
      * \param capabilities driver's capabilities
      * \param writeDatasetOnFileSuffix suffix used to write datasets on file
+     *
+     * \deprecated QGIS 3.22
+     */
+    Q_DECL_DEPRECATED QgsMeshDriverMetadata( const QString &name,
+        const QString &description,
+        const MeshDriverCapabilities &capabilities,
+        const QString &writeDatasetOnFileSuffix ) SIP_DEPRECATED;
+
+    /**
+     * Constructs driver metadata with selected capabilities
+     *
+     * \param name name/key of the driver
+     * \param description short description of the driver
+     * \param capabilities driver's capabilities
+     * \param writeDatasetOnFileSuffix suffix used to write datasets on file
+     * \param writeMeshFrameOnFileSuffix suffix used to write mesh frame on file
+     *
+     * \since QGIS 3.22
      */
     QgsMeshDriverMetadata( const QString &name,
                            const QString &description,
                            const MeshDriverCapabilities &capabilities,
-                           const QString &writeDatasetOnFileSuffix );
+                           const QString &writeDatasetOnFileSuffix,
+                           const QString &writeMeshFrameOnFileSuffix );
 
     /**
      * Returns the capabilities for this driver.
@@ -109,11 +130,19 @@ class CORE_EXPORT QgsMeshDriverMetadata
      */
     QString writeDatasetOnFileSuffix() const;
 
+    /**
+     * Returns the suffix used to write mesh on file
+     *
+     * \since QGIS 3.22
+     */
+    QString writeMeshFrameOnFileSuffix() const;
+
   private:
     QString mName;
     QString mDescription;
     MeshDriverCapabilities mCapabilities;
     QString mWriteDatasetOnFileSuffix;
+    QString mWriteMeshFrameOnFileSuffix;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS( QgsMeshDriverMetadata::MeshDriverCapabilities )
@@ -150,6 +179,7 @@ class CORE_EXPORT QgsProviderMetadata : public QObject
     {
       PriorityForUri = 1 << 0, //!< Indicates that the metadata can calculate a priority for a URI
       LayerTypesForUri = 1 << 1, //!< Indicates that the metadata can determine valid layer types for a URI
+      QuerySublayers = 1 << 2, //!< Indicates that the metadata can query sublayers for a URI (since QGIS 3.22)
     };
     Q_DECLARE_FLAGS( ProviderMetadataCapabilities, ProviderMetadataCapability )
 
@@ -323,6 +353,22 @@ class CORE_EXPORT QgsProviderMetadata : public QObject
      * \since QGIS 3.18
      */
     virtual bool uriIsBlocklisted( const QString &uri ) const;
+
+    /**
+     * Queries the specified \a uri and returns a list of any valid sublayers found in the dataset which can be handled by this provider.
+     *
+     * The optional \a flags argument can be used to control the behavior of the query.
+     *
+     * The optional \a feedback argument can be used to provide cancellation support for long-running queries.
+     *
+     * \note Providers which implement this method should always return a list of sublayer details for any valid, even if the \a uri
+     * only relates to a single layer. Returning a non-empty list indicates that the provider is able to load at least one layer using the \a uri,
+     * and is used to collate a combined layer of all providers which support the URI (e.g. in the case that a URI may be readable by multiple
+     * different providers).
+     *
+     * \since QGIS 3.22
+    */
+    virtual QList< QgsProviderSublayerDetails > querySublayers( const QString &uri, Qgis::SublayerQueryFlags flags = Qgis::SublayerQueryFlags(), QgsFeedback *feedback = nullptr ) const;
 
     /**
      * Class factory to return a pointer to a newly created QgsDataProvider object
